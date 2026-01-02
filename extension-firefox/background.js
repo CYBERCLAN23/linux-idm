@@ -4,7 +4,6 @@ let detectedMedia = {};
 // Listen for network requests to detect media files
 chrome.webRequest.onHeadersReceived.addListener(
     (details) => {
-        // We only care about main_frame, sub_frame, or other resource types that triggered a download or display
         if (details.type === 'media' || details.type === 'xmlhttprequest') {
             const headers = details.responseHeaders;
             const contentTypeHeader = headers.find(h => h.name.toLowerCase() === 'content-type');
@@ -20,17 +19,11 @@ chrome.webRequest.onHeadersReceived.addListener(
                     const tabId = details.tabId;
                     const url = details.url;
 
-                    // Filter out tiny files (likely icons or buffer segments)
                     if (size > 0 && size < 50000 && !url.includes('.m3u8')) return;
 
-                    // Initialize array for tab if not exists
-                    if (!detectedMedia[tabId]) {
-                        detectedMedia[tabId] = [];
-                    }
+                    if (!detectedMedia[tabId]) detectedMedia[tabId] = [];
 
-                    // Avoid duplicates
                     if (!detectedMedia[tabId].some(m => m.url === url)) {
-                        // Try to guess filename
                         let filename = 'media_file';
                         try {
                             const urlObj = new URL(url);
@@ -42,15 +35,22 @@ chrome.webRequest.onHeadersReceived.addListener(
                             }
                         } catch (e) { }
 
-                        detectedMedia[tabId].push({
+                        const mediaItem = {
                             url: url,
                             type: type,
                             size: size,
                             filename: filename,
-                            source: 'network' // Detected via network sniffing
-                        });
+                            source: 'network'
+                        };
 
-                        // Update badge text
+                        detectedMedia[tabId].push(mediaItem);
+
+                        // Notify content script about detection
+                        chrome.tabs.sendMessage(tabId, {
+                            action: 'showDetectionNotify',
+                            media: mediaItem
+                        }).catch(() => { }); // Ignore errors for tabs without content scripts
+
                         chrome.action.setBadgeText({ text: detectedMedia[tabId].length.toString(), tabId: tabId });
                         chrome.action.setBadgeBackgroundColor({ color: '#667eea', tabId: tabId });
                     }
@@ -59,22 +59,27 @@ chrome.webRequest.onHeadersReceived.addListener(
         }
     },
     { urls: ["<all_urls>"] },
-    ["responseHeaders"] // V3 doesn't support blocking in this listener easily, but we just need sniffing
+    ["responseHeaders"]
 );
 
-// Listen for messages from content script or popup
 chrome.runtime.onMessage.addListener((request, sender, sendResponse) => {
     if (request.action === 'getMedia') {
         const tabId = request.tabId;
         sendResponse({ media: detectedMedia[tabId] || [] });
     } else if (request.action === 'addMedia') {
-        // Message from Content Script finding DOM elements
         const tabId = sender.tab.id;
         if (!detectedMedia[tabId]) detectedMedia[tabId] = [];
 
         const mediaItem = request.media;
         if (!detectedMedia[tabId].some(m => m.url === mediaItem.url)) {
             detectedMedia[tabId].push(mediaItem);
+
+            // Notify content script (DOM detection)
+            chrome.tabs.sendMessage(tabId, {
+                action: 'showDetectionNotify',
+                media: mediaItem
+            }).catch(() => { });
+
             chrome.action.setBadgeText({ text: detectedMedia[tabId].length.toString(), tabId: tabId });
             chrome.action.setBadgeBackgroundColor({ color: '#667eea', tabId: tabId });
         }
@@ -88,9 +93,6 @@ chrome.runtime.onMessage.addListener((request, sender, sendResponse) => {
     }
 });
 
-// Clean up when tab is closed
 chrome.tabs.onRemoved.addListener((tabId) => {
-    if (detectedMedia[tabId]) {
-        delete detectedMedia[tabId];
-    }
+    if (detectedMedia[tabId]) delete detectedMedia[tabId];
 });
