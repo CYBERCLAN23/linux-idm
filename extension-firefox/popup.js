@@ -111,7 +111,6 @@ document.addEventListener('DOMContentLoaded', async () => {
                     btn.style.background = '';
                     btn.disabled = false;
                 }, 2000);
-                window.open('http://localhost:3000', '_blank');
             } else {
                 btn.textContent = 'Error! ❌';
                 btn.style.background = '#ef4444';

@@ -201,7 +201,6 @@ function updatePanelContent() {
                     if (response && response.success) {
                         this.textContent = 'Success! Opening IDM... ✅';
                         this.style.background = '#10b981';
-                        window.open('http://localhost:3000', '_blank');
                         setTimeout(() => { if (panelElement) panelElement.remove(); panelElement = null; }, 2000);
                     } else {
                         throw new Error(response ? response.error : 'Unknown error');

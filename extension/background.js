@@ -126,6 +126,8 @@ chrome.runtime.onMessage.addListener((request, sender, sendResponse) => {
                 if (response.ok) {
                     console.log('✅ Background: Download sent successfully');
                     sendResponse({ success: true });
+                    // Open/Focus dashboard
+                    openDashboardTab();
                 } else {
                     console.error('❌ Background: Server error', response.status);
                     sendResponse({ success: false, error: 'Server returned error' });
@@ -136,6 +138,10 @@ chrome.runtime.onMessage.addListener((request, sender, sendResponse) => {
                 sendResponse({ success: false, error: error.message });
             });
         return true; // Keep message channel open for async response
+    } else if (request.action === 'openDashboard') {
+        openDashboardTab();
+        sendResponse({ success: true });
+        return true;
     } else if (request.action === 'pingIDM') {
         // Try 127.0.0.1 first, then localhost as fallback
         fetch('http://127.0.0.1:3000/api/downloads', { method: 'GET', cache: 'no-store' })
@@ -152,6 +158,19 @@ chrome.runtime.onMessage.addListener((request, sender, sendResponse) => {
         return true;
     }
 });
+
+function openDashboardTab() {
+    const url = 'http://127.0.0.1:3000/';
+    chrome.tabs.query({}, (tabs) => {
+        const existingTab = tabs.find(t => t.url && (t.url.startsWith('http://127.0.0.1:3000') || t.url.startsWith('http://localhost:3000')));
+        if (existingTab) {
+            chrome.tabs.update(existingTab.id, { active: true });
+            chrome.windows.update(existingTab.windowId, { focused: true });
+        } else {
+            chrome.tabs.create({ url: url });
+        }
+    });
+}
 
 chrome.tabs.onRemoved.addListener((tabId) => {
     if (detectedMedia[tabId]) delete detectedMedia[tabId];
