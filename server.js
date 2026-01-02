@@ -1,5 +1,6 @@
 const express = require('express');
 const axios = require('axios');
+const ytdl = require('ytdl-core');
 const fs = require('fs');
 const path = require('path');
 const http = require('http');
@@ -121,6 +122,12 @@ app.delete('/api/download/:id', (req, res) => {
 
 // Download function
 async function startDownload(download) {
+    const isYouTube = ytdl.validateURL(download.url);
+
+    if (isYouTube) {
+        return handleYouTubeDownload(download);
+    }
+
     try {
         const cancelTokenSource = axios.CancelToken.source();
         download.cancelToken = cancelTokenSource;
@@ -202,6 +209,66 @@ async function startDownload(download) {
                 broadcast({ type: 'download-error', download: currentDownload });
             }
         }
+    }
+}
+
+async function handleYouTubeDownload(download) {
+    try {
+        console.log('Starting YouTube download:', download.url);
+
+        const info = await ytdl.getInfo(download.url);
+        const title = info.videoDetails.title.replace(/[^a-z0-9]/gi, '_');
+        download.filename = `${title}.mp4`;
+
+        const stream = ytdl(download.url, {
+            quality: 'highest'
+        });
+
+        const downloadDir = download.savePath;
+        if (!fs.existsSync(downloadDir)) fs.mkdirSync(downloadDir, { recursive: true });
+
+        const filePath = path.join(downloadDir, download.filename);
+        const writer = fs.createWriteStream(filePath);
+
+        stream.pipe(writer);
+
+        let lastLoaded = 0;
+        let lastTime = Date.now();
+
+        stream.on('progress', (chunkLength, downloaded, total) => {
+            const currentTime = Date.now();
+            const timeDiff = (currentTime - lastTime) / 1000;
+            const loadedDiff = downloaded - lastLoaded;
+            const speed = timeDiff > 0 ? (loadedDiff / 1024) / timeDiff : 0;
+
+            download.downloadedSize = downloaded;
+            download.totalSize = total;
+            download.progress = Math.round((download / total) * 100);
+            download.speed = Math.round(speed);
+
+            lastLoaded = downloaded;
+            lastTime = currentTime;
+
+            broadcast({ type: 'download-progress', download });
+        });
+
+        writer.on('finish', () => {
+            download.status = 'completed';
+            download.progress = 100;
+            download.speed = 0;
+            broadcast({ type: 'download-complete', download });
+        });
+
+        writer.on('error', (err) => {
+            download.status = 'error';
+            download.error = err.message;
+            broadcast({ type: 'download-error', download });
+        });
+
+    } catch (err) {
+        download.status = 'error';
+        download.error = err.message;
+        broadcast({ type: 'download-error', download });
     }
 }
 

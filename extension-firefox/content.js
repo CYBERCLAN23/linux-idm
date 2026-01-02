@@ -1,6 +1,20 @@
 // Scans the DOM for video and audio tags
 function scanDOM() {
     const media = [];
+
+    // 1. YouTube Specific Detection
+    if (window.location.hostname.includes('youtube.com') && window.location.pathname === '/watch') {
+        media.push({
+            url: window.location.href,
+            type: 'video/youtube',
+            filename: document.title.replace(' - YouTube', ''),
+            title: document.title.replace(' - YouTube', ''),
+            size: 0,
+            source: 'youtube'
+        });
+    }
+
+    // 2. Generic Video Scans
     document.querySelectorAll('video').forEach(video => {
         if (video.currentSrc && !video.currentSrc.startsWith('blob:')) {
             media.push({
@@ -33,6 +47,9 @@ function renderDetectionPanel(newMedia) {
     if (!detectedItems.some(m => m.url === newMedia.url)) {
         detectedItems.push(newMedia);
         detectedItems.sort((a, b) => {
+            // Priorities: YouTube first, then HLS, then size
+            if (a.source === 'youtube') return -1;
+            if (b.source === 'youtube') return 1;
             if (a.url.includes('.m3u8')) return -1;
             if (b.url.includes('.m3u8')) return 1;
             return b.size - a.size;
@@ -62,12 +79,22 @@ function updatePanelContent() {
     const mainMedia = detectedItems[0];
     const otherCount = detectedItems.length - 1;
 
-    const resMatch = mainMedia.url.match(/(1080|720|480|360)p/i);
-    const resolution = resMatch ? resMatch[0] : (mainMedia.url.includes('master.m3u8') ? 'Auto (HLS)' : 'Original');
+    let resolution = 'Original';
+    if (mainMedia.source === 'youtube') {
+        resolution = 'Highest (ytdl)';
+    } else {
+        const resMatch = mainMedia.url.match(/(1080|720|480|360)p/i);
+        resolution = resMatch ? resMatch[0] : (mainMedia.url.includes('master.m3u8') ? 'Auto (HLS)' : 'Original');
+    }
 
-    const sizeStr = mainMedia.size > 0
-        ? (mainMedia.size / (1024 * 1024)).toFixed(2) + ' MB'
-        : (mainMedia.url.includes('.m3u8') ? 'Adaptive Stream' : 'Calculating...');
+    let sizeStr = 'Calculating...';
+    if (mainMedia.source === 'youtube') {
+        sizeStr = 'YouTube Stream';
+    } else if (mainMedia.size > 0) {
+        sizeStr = (mainMedia.size / (1024 * 1024)).toFixed(2) + ' MB';
+    } else if (mainMedia.url.includes('.m3u8')) {
+        sizeStr = 'Adaptive Stream';
+    }
 
     panelElement.innerHTML = `
         <div style="background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); padding: 14px; display: flex; align-items: center; justify-content: space-between;">
@@ -78,8 +105,8 @@ function updatePanelContent() {
             <button id="idm-close-btn" style="background: rgba(255,255,255,0.2); border: none; color: white; cursor: pointer; font-size: 20px; line-height: 1; width: 28px; height: 28px; border-radius: 50%; display: flex; align-items: center; justify-content: center; transition: background 0.2s; z-index: 10000000;">&times;</button>
         </div>
         <div style="padding: 18px;">
-            <div style="font-size: 14px; font-weight: 600; margin-bottom: 8px; color: #fff; line-height: 1.4; display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden;" title="${document.title}">
-                ${document.title}
+            <div style="font-size: 14px; font-weight: 600; margin-bottom: 8px; color: #fff; line-height: 1.4; display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden;" title="${mainMedia.title}">
+                ${mainMedia.title}
             </div>
             
             <div style="display: flex; flex-wrap: wrap; gap: 10px; margin-bottom: 20px;">
@@ -87,13 +114,13 @@ function updatePanelContent() {
                     <span style="color: #a0a0b8; margin-right: 4px;">RES</span><b>${resolution}</b>
                 </div>
                 <div style="background: #1a1a2e; padding: 4px 10px; border-radius: 6px; border: 1px solid #2d2d42; font-size: 11px;">
-                    <span style="color: #a0a0b8; margin-right: 4px;">SIZE</span><b>${sizeStr}</b>
+                    <span style="color: #a0a0b8; margin-right: 4px;">SOURCE</span><b>${mainMedia.source.toUpperCase()}</b>
                 </div>
                 ${otherCount > 0 ? `<div style="background: #252538; padding: 4px 10px; border-radius: 6px; border: 1px dashed #667eea; font-size: 11px; color: #667eea;">+${otherCount} more</div>` : ''}
             </div>
 
             <button id="idm-download-now" style="width: 100%; background: #667eea; color: white; border: none; padding: 12px; border-radius: 8px; font-weight: 700; font-size: 13px; cursor: pointer; transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1); box-shadow: 0 4px 12px rgba(102, 126, 234, 0.3);">
-                Download Main Video
+                Download with Linux IDM
             </button>
             <div style="text-align: center; margin-top: 12px;">
                 <a href="#" id="idm-show-all" style="color: #a0a0b8; font-size: 11px; text-decoration: none;">View all detected files</a>
@@ -106,7 +133,6 @@ function updatePanelContent() {
         </style>
     `;
 
-    // Fix the close button
     const closeBtn = document.getElementById('idm-close-btn');
     if (closeBtn) {
         closeBtn.onclick = (e) => {
@@ -129,7 +155,7 @@ function updatePanelContent() {
                     headers: { 'Content-Type': 'application/json' },
                     body: JSON.stringify({
                         url: mainMedia.url,
-                        filename: (document.title || 'download').replace(/[^a-z0-9]/gi, '_').substring(0, 80) + '.' + (mainMedia.type.split('/')[1] || 'mp4').split(';')[0],
+                        filename: mainMedia.filename.replace(/[^a-z0-9]/gi, '_').substring(0, 80) + '.mp4',
                         savePath: '',
                         chunks: 8
                     })
@@ -144,7 +170,7 @@ function updatePanelContent() {
                 this.textContent = '❌ Error: IDM Not Running';
                 this.style.background = '#ef4444';
                 setTimeout(() => {
-                    this.textContent = 'Download Main Video';
+                    this.textContent = 'Download with Linux IDM';
                     this.disabled = false;
                     this.style.background = '#667eea';
                 }, 3000);
@@ -161,6 +187,17 @@ function updatePanelContent() {
     }
 }
 
+// Global scope initialization
 scanDOM();
+// Watch for page transitions (YouTube is a SPA)
+let lastUrl = location.href;
+new MutationObserver(() => {
+    const url = location.href;
+    if (url !== lastUrl) {
+        lastUrl = url;
+        scanDOM();
+    }
+}).observe(document, { subtree: true, childList: true });
+
 const observer = new MutationObserver(scanDOM);
 observer.observe(document.body, { childList: true, subtree: true });
