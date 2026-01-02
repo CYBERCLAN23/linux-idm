@@ -10,7 +10,7 @@
 ## ✨ Features
 
 - **🔥 Multi-threaded Downloads**: Split files into multiple chunks to maximize your bandwidth.
-- **⚡ Auto-Detection HUD**: Smart browser extension that automatically detects media and shows a beautiful download pop-up on page.
+- **⚡ Smart Detection HUD**: Automatic HUD detects media on any page. It's smart enough to **ignore ads** and prioritize the actual video content.
 - **⏸️ Pause & Resume**: Stop downloads at any time and resume them exactly where you left off.
 - **🌐 Browser Integration**: Dedicated extensions for Chrome/Chromium and Firefox to capture media links automatically.
 - **🎥 YouTube Downloader**: Built-in support for downloading videos directly from YouTube with title and resolution detection.
@@ -27,6 +27,7 @@
 If you have the repository, just run the auto-installer:
 ```bash
 ./easy-install.sh
+# After installation, you can just type 'idm' in any terminal!
 ```
 
 ### Method 1: Download Pre-built Packages (Recommended)

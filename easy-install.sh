@@ -47,12 +47,20 @@ echo -e "\n🖥️ Setting up application menu shortcuts..."
 chmod +x install-desktop.sh
 ./install-desktop.sh
 
+# Add alias for easier CLI usage
+if ! grep -q "alias idm=" ~/.bashrc; then
+    echo -e "\n⌨️  Adding 'idm' command to your shell..."
+    echo "alias idm='$DIR/start-web.sh'" >> ~/.bashrc
+    echo -e "You can now just type ${BLUE}'idm'${NC} in any terminal to start!"
+fi
+
 # Finalizing
 echo -e "\n✨ ${GREEN}Installation Complete!${NC}"
 echo "-------------------------------------------------------"
 echo -e "🚀 ${BLUE}HOW TO START:${NC}"
 echo -e "1. Search for ${PURPLE}'Linux IDM (Web)'${NC} in your app menu."
-echo -e "2. Or run: ${BLUE}./start-web.sh${NC} in this folder."
+echo -e "2. Or type ${BLUE}'idm'${NC} in a NEW terminal."
+echo -e "3. Or run: ${BLUE}./start-web.sh${NC} in this folder."
 echo ""
 echo -e "🌐 ${BLUE}HOW TO ADD TO BROWSER:${NC}"
 echo -e "• ${GREEN}Chrome/Brave:${NC} Open chrome://extensions, enable Developer Mode, 'Load Unpacked', select the 'extension' folder."
