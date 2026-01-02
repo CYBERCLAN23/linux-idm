@@ -218,25 +218,40 @@ async function handleYouTubeDownload(download) {
     try {
         console.log('🚀 Using YT-DLP for robust download:', download.url);
 
-        // 1. Get info first to get the title
-        const { execSync } = require('child_process');
-        let titleData = 'media';
+        // 1. Get info first to get the title asynchronously
+        let titleData = 'youtube_video';
         try {
-            titleData = execSync(`yt-dlp --get-title --no-check-certificate "${download.url}"`).toString().trim();
+            titleData = await new Promise((resolve, reject) => {
+                const titleProcess = spawn('yt-dlp', ['--get-title', '--no-check-certificate', download.url]);
+                let result = '';
+                const timeout = setTimeout(() => {
+                    titleProcess.kill();
+                    resolve('youtube_video');
+                }, 10000);
+
+                titleProcess.stdout.on('data', (data) => { result += data.toString(); });
+                titleProcess.on('close', (code) => {
+                    clearTimeout(timeout);
+                    if (code === 0 && result.trim()) resolve(result.trim());
+                    else resolve('youtube_video');
+                });
+            });
         } catch (e) {
             console.warn('Title fetch failed, using fallback.');
         }
         download.filename = `${titleData.replace(/[^a-z0-9]/gi, '_')}.mp4`;
+        console.log(`📂 Prepared filename: ${download.filename}`);
 
         const downloadDir = download.savePath;
         if (!fs.existsSync(downloadDir)) fs.mkdirSync(downloadDir, { recursive: true });
         const filePath = path.join(downloadDir, download.filename);
 
         // 2. Start the process
-        // Added --user-agent and --no-check-certificate for extra resilience
+        // Added --user-agent, --no-check-certificate, and --no-playlist
         const process = spawn('yt-dlp', [
             '-f', 'bv*[ext=mp4]+ba[ext=m4a]/b[ext=mp4] / bv*+ba/b',
             '--newline',
+            '--no-playlist',
             '--no-check-certificate',
             '--user-agent', 'Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/121.0.0.0 Safari/537.36',
             '--progress-template', 'IDM:%(progress._percent_str)s|%(progress._speed_str)s|%(progress._total_bytes_estimate_str)s',
@@ -244,37 +259,54 @@ async function handleYouTubeDownload(download) {
             download.url
         ]);
 
+        let lastProgressLog = -1;
+
         process.stdout.on('data', (data) => {
             const line = data.toString();
             if (line.includes('IDM:')) {
                 const parts = line.split('IDM:')[1].split('|');
-                const percent = parseFloat(parts[0].replace('%', ''));
+                const percentStr = parts[0].replace('%', '').trim();
+                const percent = parseFloat(percentStr);
                 const speedStr = parts[1];
                 const totalSizeStr = parts[2];
 
                 download.progress = Math.round(percent);
                 download.status = 'downloading';
-                // Try to parse speed into KB/s if possible for the UI
+
                 if (speedStr.includes('k')) download.speed = parseFloat(speedStr);
                 else if (speedStr.includes('M')) download.speed = parseFloat(speedStr) * 1024;
 
                 broadcast({ type: 'download-progress', download });
+
+                // Log every 10%
+                if (Math.floor(percent / 10) > lastProgressLog) {
+                    lastProgressLog = Math.floor(percent / 10);
+                    console.log(`⏳ Download progress [${download.id}]: ${download.progress}% @ ${speedStr}`);
+                }
             }
         });
 
         process.stderr.on('data', (data) => {
-            console.error('YT-DLP Warning:', data.toString());
+            const msg = data.toString();
+            if (msg.includes('ERROR')) {
+                console.error(`❌ YT-DLP ERROR [${download.id}]:`, msg.trim());
+            } else {
+                // Warnings/Progress logs
+                if (!msg.includes('%')) console.log(`⚠️ YT-DLP Info [${download.id}]:`, msg.trim());
+            }
         });
 
         process.on('close', (code) => {
             if (code === 0) {
+                console.log(`✅ Download completed successfully [${download.id}]: ${download.filename}`);
                 download.status = 'completed';
                 download.progress = 100;
                 download.speed = 0;
                 broadcast({ type: 'download-complete', download });
             } else {
+                console.error(`❌ YT-DLP process exited with code ${code} [${download.id}]`);
                 download.status = 'error';
-                download.error = `yt-dlp exited with code ${code}. If you are on a VPN, try turning it off.`;
+                download.error = `yt-dlp exited with code ${code}. YouTube might be blocking the request.`;
                 broadcast({ type: 'download-error', download });
             }
         });
