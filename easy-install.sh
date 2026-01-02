@@ -12,6 +12,9 @@ BLUE='\033[0;34m'
 PURPLE='\033[0;35m'
 NC='\033[0m' # No Color
 
+# Get absolute path of the current directory
+DIR="$( cd "$( dirname "${BASH_SOURCE[0]}" )" >/dev/null 2>&1 && pwd )"
+
 clear
 echo -e "${PURPLE}"
 echo "  _      _                      _____ _____  __  __ "
@@ -50,9 +53,24 @@ chmod +x install-desktop.sh
 # Add alias for easier CLI usage
 if ! grep -q "alias idm=" ~/.bashrc; then
     echo -e "\n⌨️  Adding 'idm' command to your shell..."
+    # Correctly handle quotes in the alias
     echo "alias idm='$DIR/start-web.sh'" >> ~/.bashrc
     echo -e "You can now just type ${BLUE}'idm'${NC} in any terminal to start!"
 fi
+
+# Enable Background Autostart
+echo -e "\n⚙️ Setting up background autostart (systemd)..."
+mkdir -p ~/.config/systemd/user/
+cp $DIR/linux-idm.service ~/.config/systemd/user/linux-idm.service
+# Update paths in service file dynamically
+sed -i "s|WorkingDirectory=.*|WorkingDirectory=$DIR|" ~/.config/systemd/user/linux-idm.service
+sed -i "s|ExecStart=.*|ExecStart=$(which node) $DIR/server.js --background|" ~/.config/systemd/user/linux-idm.service
+
+systemctl --user daemon-reload
+systemctl --user enable linux-idm.service
+systemctl --user restart linux-idm.service
+
+echo -e "${GREEN}✅ Background service enabled! IDM will start on every reboot.${NC}"
 
 # Finalizing
 echo -e "\n✨ ${GREEN}Installation Complete!${NC}"

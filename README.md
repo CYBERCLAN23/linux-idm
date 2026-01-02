@@ -12,6 +12,7 @@
 - **🔥 Multi-threaded Downloads**: Split files into multiple chunks to maximize your bandwidth.
 - **⚡ Smart Detection HUD**: Automatic HUD detects media on any page. It's smart enough to **ignore ads** and prioritize the actual video content.
 - **⏸️ Pause & Resume**: Stop downloads at any time and resume them exactly where you left off.
+- **🔄 System Integration**: Automatic background service that starts when your PC boots.
 - **🌐 Browser Integration**: Dedicated extensions for Chrome/Chromium and Firefox to capture media links automatically.
 - **🎥 YouTube Downloader**: Built-in support for downloading videos directly from YouTube with title and resolution detection.
 - **🎨 Premium Dark UI**: A beautiful, modern interface with glassmorphism effects and smooth animations.

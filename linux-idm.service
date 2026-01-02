@@ -1,0 +1,14 @@
+[Unit]
+Description=Linux IDM Web Server
+After=network.target
+
+[Service]
+Type=simple
+WorkingDirectory=/home/psycho/Desktop/idm
+ExecStart=/home/psycho/.nvm/versions/node/v20.19.6/bin/node /home/psycho/Desktop/idm/server.js --background
+Restart=always
+RestartSec=10
+Environment=NODE_ENV=production
+
+[Install]
+WantedBy=default.target

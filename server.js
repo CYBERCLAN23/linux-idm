@@ -214,21 +214,23 @@ server.listen(PORT, () => {
     console.log('\n💡 Open your browser and navigate to the URL above');
     console.log('\n━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━\n');
 
-    // Try to open browser automatically
-    const open = require('child_process').exec;
-    const url = `http://localhost:${PORT}`;
+    // Try to open browser automatically (skip if running in background)
+    const isBackground = process.argv.includes('--background');
+    if (!isBackground) {
+        const open = require('child_process').exec;
+        const url = `http://localhost:${PORT}`;
 
-    // Detect platform and open browser
-    const start = process.platform === 'darwin' ? 'open' :
-        process.platform === 'win32' ? 'start' : 'xdg-open';
+        const start = process.platform === 'darwin' ? 'open' :
+            process.platform === 'win32' ? 'start' : 'xdg-open';
 
-    setTimeout(() => {
-        open(`${start} ${url}`, (error) => {
-            if (error) {
-                console.log('💡 Please manually open: http://localhost:3000');
-            }
-        });
-    }, 1000);
+        setTimeout(() => {
+            open(`${start} ${url}`, (error) => {
+                if (error) {
+                    console.log('💡 Please manually open: http://localhost:3000');
+                }
+            });
+        }, 1000);
+    }
 });
 
 // Graceful shutdown
