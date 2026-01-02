@@ -222,18 +222,21 @@ const { spawn } = require('child_process');
 
 async function handleYouTubeDownload(download) {
     try {
-        console.log('🚀 Using YT-DLP for robust download:', download.url);
-
         // 1. Get info first to get the title asynchronously
         let titleData = 'youtube_video';
         try {
             titleData = await new Promise((resolve, reject) => {
-                const titleProcess = spawn('yt-dlp', ['--get-title', '--no-check-certificate', download.url]);
+                const titleProcess = spawn('yt-dlp', [
+                    '--get-title',
+                    '--no-check-certificate',
+                    '--extractor-args', 'youtube:player-client=web,ios',
+                    download.url
+                ]);
                 let result = '';
                 const timeout = setTimeout(() => {
                     titleProcess.kill();
                     resolve('youtube_video');
-                }, 10000);
+                }, 15000); // 15s timeout
 
                 titleProcess.stdout.on('data', (data) => { result += data.toString(); });
                 titleProcess.on('close', (code) => {
@@ -253,17 +256,18 @@ async function handleYouTubeDownload(download) {
         const filePath = path.join(downloadDir, download.filename);
 
         // 2. Start the process with Turbo Mode (Aria2c + Multithreading)
-        // We use --external-downloader to bypass YouTube's throttling for standard single-stream downloads
+        // Added extractor-args to fix Signature Extraction failures
         const process = spawn('yt-dlp', [
             '-f', 'bv*[ext=mp4]+ba[ext=m4a]/b[ext=mp4] / bv*+ba/b',
             '--newline',
             '--no-playlist',
             '--no-check-certificate',
+            '--extractor-args', 'youtube:player-client=web,ios',
             '--user-agent', 'Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/121.0.0.0 Safari/537.36',
             '--external-downloader', 'aria2c',
-            '--external-downloader-args', 'aria2c:-x 16 -s 16 -k 1M',
-            '--buffer-size', '10M',
-            '--concurrent-fragments', '8',
+            '--external-downloader-args', 'aria2c:-x 8 -s 8 -k 1M --file-allocation=none',
+            '--buffer-size', '1M',
+            '--concurrent-fragments', '4',
             '--progress-template', 'IDM:%(progress._percent_str)s|%(progress._speed_str)s|%(progress._total_bytes_estimate_str)s',
             '-o', filePath,
             download.url
