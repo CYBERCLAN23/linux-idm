@@ -28,15 +28,44 @@ function scanDOM() {
         }
     });
 
+    // 3. Look for custom data attributes
+    document.querySelectorAll('[data-video-src]').forEach(el => {
+        const src = el.getAttribute('data-video-src');
+        if (src && src.startsWith('http')) {
+            media.push({
+                url: src,
+                type: 'video/stream',
+                filename: document.title || 'stream',
+                title: document.title,
+                size: 0,
+                source: 'dom_extra'
+            });
+        }
+    });
+
     media.forEach(m => {
         chrome.runtime.sendMessage({ action: 'addMedia', media: m });
     });
 }
 
+// Global scope initialization
+scanDOM();
+let lastUrl = location.href;
+const observer = new MutationObserver(() => {
+    if (location.href !== lastUrl) {
+        lastUrl = location.href;
+    }
+    scanDOM();
+});
+observer.observe(document.body, { childList: true, subtree: true });
+
 // Listen for messages from background
 chrome.runtime.onMessage.addListener((request, sender, sendResponse) => {
     if (request.action === 'showDetectionNotify') {
-        renderDetectionPanel(request.media);
+        // Only show the HUD in the main window to avoid cluttered iframes
+        if (window.top === window) {
+            renderDetectionPanel(request.media);
+        }
     }
 });
 
@@ -47,7 +76,6 @@ function renderDetectionPanel(newMedia) {
     if (!detectedItems.some(m => m.url === newMedia.url)) {
         detectedItems.push(newMedia);
         detectedItems.sort((a, b) => {
-            // Priorities: YouTube first, then HLS, then size
             if (a.source === 'youtube') return -1;
             if (b.source === 'youtube') return 1;
             if (a.url.includes('.m3u8')) return -1;
@@ -84,7 +112,7 @@ function updatePanelContent() {
         resolution = 'Highest (ytdl)';
     } else {
         const resMatch = mainMedia.url.match(/(1080|720|480|360)p/i);
-        resolution = resMatch ? resMatch[0] : (mainMedia.url.includes('master.m3u8') ? 'Auto (HLS)' : 'Original');
+        resolution = resMatch ? resMatch[0] : (mainMedia.url.includes('mpegurl') || mainMedia.url.includes('.m3u8') ? 'Auto (HLS)' : 'Original');
     }
 
     let sizeStr = 'Calculating...';
@@ -92,7 +120,7 @@ function updatePanelContent() {
         sizeStr = 'YouTube Stream';
     } else if (mainMedia.size > 0) {
         sizeStr = (mainMedia.size / (1024 * 1024)).toFixed(2) + ' MB';
-    } else if (mainMedia.url.includes('.m3u8')) {
+    } else if (mainMedia.url.includes('.m3u8') || mainMedia.url.includes('.mpd')) {
         sizeStr = 'Adaptive Stream';
     }
 
@@ -164,10 +192,7 @@ function updatePanelContent() {
                 if (response.ok) {
                     this.textContent = 'Success! Opening IDM... ✅';
                     this.style.background = '#10b981';
-
-                    // Redirect to the IDM dashboard in a new tab
                     window.open('http://localhost:3000', '_blank');
-
                     setTimeout(() => { if (panelElement) panelElement.remove(); panelElement = null; }, 2000);
                 } else { throw new Error(); }
             } catch (e) {
@@ -186,22 +211,7 @@ function updatePanelContent() {
     if (showAllBtn) {
         showAllBtn.onclick = (e) => {
             e.preventDefault();
-            alert('Check the Linux IDM extension icon in your browser toolbar to see all ' + detectedItems.length + ' detected files!');
+            alert('Check the Linux IDM extension icon in your toolbar to see all ' + detectedItems.length + ' detected files!');
         };
     }
 }
-
-// Global scope initialization
-scanDOM();
-// Watch for page transitions (YouTube is a SPA)
-let lastUrl = location.href;
-new MutationObserver(() => {
-    const url = location.href;
-    if (url !== lastUrl) {
-        lastUrl = url;
-        scanDOM();
-    }
-}).observe(document, { subtree: true, childList: true });
-
-const observer = new MutationObserver(scanDOM);
-observer.observe(document.body, { childList: true, subtree: true });
