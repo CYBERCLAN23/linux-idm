@@ -5,7 +5,7 @@ document.addEventListener('DOMContentLoaded', async () => {
     const clearBtn = document.getElementById('clear-btn');
 
     let isConnected = false;
-    const IDM_API_URL = 'http://localhost:3000/api/download';
+    const IDM_API_URL = 'http://127.0.0.1:3000/api/download';
 
     // Check IDM Connection via background
     async function checkConnection() {

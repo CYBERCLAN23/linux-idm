@@ -115,27 +115,35 @@ chrome.runtime.onMessage.addListener((request, sender, sendResponse) => {
         }
         sendResponse({ success: true });
     } else if (request.action === 'startDownload') {
+        console.log('🛰️ Background: Starting download to IDM...', request.data.url);
         // Perform the fetch from the background script to bypass CORS/Mixed Content
-        fetch('http://localhost:3000/api/download', {
+        fetch('http://127.0.0.1:3000/api/download', {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify(request.data)
         })
             .then(response => {
                 if (response.ok) {
+                    console.log('✅ Background: Download sent successfully');
                     sendResponse({ success: true });
                 } else {
+                    console.error('❌ Background: Server error', response.status);
                     sendResponse({ success: false, error: 'Server returned error' });
                 }
             })
             .catch(error => {
+                console.error('❌ Background: Fetch failed', error);
                 sendResponse({ success: false, error: error.message });
             });
         return true; // Keep message channel open for async response
     } else if (request.action === 'pingIDM') {
-        fetch('http://localhost:3000/api/downloads', { method: 'GET' })
-            .then(() => sendResponse({ connected: true }))
-            .catch(() => sendResponse({ connected: false }));
+        fetch('http://127.0.0.1:3000/api/downloads', { method: 'GET' })
+            .then(() => {
+                sendResponse({ connected: true });
+            })
+            .catch(() => {
+                sendResponse({ connected: false });
+            });
         return true;
     }
 });
