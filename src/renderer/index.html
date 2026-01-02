@@ -1,0 +1,204 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Linux IDM - Internet Download Manager</title>
+  <link rel="stylesheet" href="styles.css">
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+</head>
+<body>
+  <div class="app-container">
+    <!-- Sidebar -->
+    <aside class="sidebar">
+      <div class="sidebar-header">
+        <div class="logo">
+          <svg width="40" height="40" viewBox="0 0 40 40" fill="none">
+            <rect width="40" height="40" rx="8" fill="url(#gradient1)"/>
+            <path d="M20 10L20 30M12 20L28 20" stroke="white" stroke-width="3" stroke-linecap="round"/>
+            <defs>
+              <linearGradient id="gradient1" x1="0" y1="0" x2="40" y2="40">
+                <stop offset="0%" stop-color="#667eea"/>
+                <stop offset="100%" stop-color="#764ba2"/>
+              </linearGradient>
+            </defs>
+          </svg>
+          <div class="logo-text">
+            <h1>Linux IDM</h1>
+            <p>Download Manager</p>
+          </div>
+        </div>
+      </div>
+      
+      <nav class="sidebar-nav">
+        <button class="nav-item active" data-view="all">
+          <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+            <path d="M3 9l9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"/>
+            <polyline points="9 22 9 12 15 12 15 22"/>
+          </svg>
+          <span>All Downloads</span>
+          <span class="count" id="all-count">0</span>
+        </button>
+        
+        <button class="nav-item" data-view="downloading">
+          <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+            <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/>
+            <polyline points="7 10 12 15 17 10"/>
+            <line x1="12" y1="15" x2="12" y2="3"/>
+          </svg>
+          <span>Downloading</span>
+          <span class="count" id="downloading-count">0</span>
+        </button>
+        
+        <button class="nav-item" data-view="completed">
+          <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+            <polyline points="20 6 9 17 4 12"/>
+          </svg>
+          <span>Completed</span>
+          <span class="count" id="completed-count">0</span>
+        </button>
+        
+        <button class="nav-item" data-view="paused">
+          <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+            <rect x="6" y="4" width="4" height="16"/>
+            <rect x="14" y="4" width="4" height="16"/>
+          </svg>
+          <span>Paused</span>
+          <span class="count" id="paused-count">0</span>
+        </button>
+      </nav>
+      
+      <div class="sidebar-footer">
+        <div class="stats">
+          <div class="stat-item">
+            <span class="stat-label">Total</span>
+            <span class="stat-value" id="total-downloads">0</span>
+          </div>
+          <div class="stat-item">
+            <span class="stat-label">Speed</span>
+            <span class="stat-value" id="total-speed">0 KB/s</span>
+          </div>
+        </div>
+      </div>
+    </aside>
+    
+    <!-- Main Content -->
+    <main class="main-content">
+      <header class="top-bar">
+        <div class="search-bar">
+          <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+            <circle cx="11" cy="11" r="8"/>
+            <path d="m21 21-4.35-4.35"/>
+          </svg>
+          <input type="text" placeholder="Search downloads..." id="search-input">
+        </div>
+        
+        <div class="top-actions">
+          <button class="btn-icon" id="settings-btn" title="Settings">
+            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+              <circle cx="12" cy="12" r="3"/>
+              <path d="M12 1v6m0 6v6m5.196-15.804L13.5 6.893m-3 3L7.804 6.196M1 12h6m6 0h6m-15.804 5.196L6.893 13.5m3 3-3.697 3.697M12 1v6m0 6v6"/>
+            </svg>
+          </button>
+          <button class="btn-primary" id="add-download-btn">
+            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+              <line x1="12" y1="5" x2="12" y2="19"/>
+              <line x1="5" y1="12" x2="19" y2="12"/>
+            </svg>
+            New Download
+          </button>
+        </div>
+      </header>
+      
+      <div class="content-area">
+        <div class="downloads-header">
+          <h2 id="view-title">All Downloads</h2>
+          <div class="view-options">
+            <button class="view-option active" data-layout="grid">
+              <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                <rect x="3" y="3" width="7" height="7"/>
+                <rect x="14" y="3" width="7" height="7"/>
+                <rect x="14" y="14" width="7" height="7"/>
+                <rect x="3" y="14" width="7" height="7"/>
+              </svg>
+            </button>
+            <button class="view-option" data-layout="list">
+              <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                <line x1="8" y1="6" x2="21" y2="6"/>
+                <line x1="8" y1="12" x2="21" y2="12"/>
+                <line x1="8" y1="18" x2="21" y2="18"/>
+                <line x1="3" y1="6" x2="3.01" y2="6"/>
+                <line x1="3" y1="12" x2="3.01" y2="12"/>
+                <line x1="3" y1="18" x2="3.01" y2="18"/>
+              </svg>
+            </button>
+          </div>
+        </div>
+        
+        <div class="downloads-grid" id="downloads-container">
+          <!-- Downloads will be inserted here -->
+        </div>
+        
+        <div class="empty-state" id="empty-state">
+          <svg width="120" height="120" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1">
+            <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/>
+            <polyline points="7 10 12 15 17 10"/>
+            <line x1="12" y1="15" x2="12" y2="3"/>
+          </svg>
+          <h3>No downloads yet</h3>
+          <p>Click the "New Download" button to get started</p>
+        </div>
+      </div>
+    </main>
+  </div>
+  
+  <!-- Add Download Modal -->
+  <div class="modal" id="add-download-modal">
+    <div class="modal-content">
+      <div class="modal-header">
+        <h3>New Download</h3>
+        <button class="modal-close" id="close-modal">
+          <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+            <line x1="18" y1="6" x2="6" y2="18"/>
+            <line x1="6" y1="6" x2="18" y2="18"/>
+          </svg>
+        </button>
+      </div>
+      
+      <div class="modal-body">
+        <div class="form-group">
+          <label for="download-url">Download URL</label>
+          <input type="url" id="download-url" placeholder="https://example.com/file.zip" required>
+          <small>Supports HTTP, HTTPS, FTP, and YouTube links</small>
+        </div>
+        
+        <div class="form-group">
+          <label for="download-filename">File Name</label>
+          <input type="text" id="download-filename" placeholder="file.zip" required>
+        </div>
+        
+        <div class="form-group">
+          <label for="download-path">Save Location</label>
+          <div class="path-input-group">
+            <input type="text" id="download-path" placeholder="/home/user/Downloads" readonly required>
+            <button class="btn-secondary" id="browse-path">Browse</button>
+          </div>
+        </div>
+        
+        <div class="form-group">
+          <label for="download-chunks">Connection Chunks (Threads)</label>
+          <input type="number" id="download-chunks" min="1" max="16" value="4">
+          <small>More chunks = faster download (recommended: 4-8)</small>
+        </div>
+      </div>
+      
+      <div class="modal-footer">
+        <button class="btn-secondary" id="cancel-download">Cancel</button>
+        <button class="btn-primary" id="start-download">Start Download</button>
+      </div>
+    </div>
+  </div>
+  
+  <script src="renderer.js"></script>
+</body>
+</html>

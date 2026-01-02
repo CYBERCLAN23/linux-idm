@@ -1,0 +1,53 @@
+{
+    "name": "linux-idm",
+    "version": "1.0.0",
+    "description": "Internet Download Manager for Linux",
+    "main": "src/main.js",
+    "scripts": {
+        "start": "electron .",
+        "dev": "electron . --dev",
+        "build": "electron-builder",
+        "build:linux": "electron-builder --linux"
+    },
+    "keywords": [
+        "download",
+        "manager",
+        "linux",
+        "idm"
+    ],
+    "author": "XYBERCLAN",
+    "license": "MIT",
+    "dependencies": {
+        "axios": "^1.6.2",
+        "electron-store": "^8.1.0",
+        "ytdl-core": "^4.11.5"
+    },
+    "devDependencies": {
+        "electron": "^28.0.0",
+        "electron-builder": "^24.9.1"
+    },
+    "build": {
+        "appId": "com.xyberclan.idm",
+        "productName": "Linux IDM",
+        "linux": {
+            "target": [
+                "AppImage",
+                "deb",
+                "rpm"
+            ],
+            "category": "Network",
+            "executableName": "linux-idm",
+            "maintainer": "XYBERCLAN <psychomarlon6@gmail.com>",
+            "icon": "assets/icon.png",
+            "desktop": {
+                "Name": "Linux IDM",
+                "GenericName": "Download Manager",
+                "Keywords": "download;manager;idm;internet;"
+            }
+        },
+        "deb": {
+            "priority": "optional",
+            "packageCategory": "network"
+        }
+    }
+}

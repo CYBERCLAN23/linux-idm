@@ -1,0 +1,48 @@
+{
+    "manifest_version": 2,
+    "name": "Linux IDM Integration (Firefox)",
+    "version": "1.0",
+    "description": "Detects media on web pages and sends them to Linux IDM for high-speed doownloading.",
+    "permissions": [
+        "activeTab",
+        "webRequest",
+        "<all_urls>",
+        "storage",
+        "tabs"
+    ],
+    "browser_action": {
+        "default_popup": "popup.html",
+        "default_icon": {
+            "16": "icons/icon16.png",
+            "48": "icons/icon48.png",
+            "128": "icons/icon128.png"
+        }
+    },
+    "icons": {
+        "16": "icons/icon16.png",
+        "48": "icons/icon48.png",
+        "128": "icons/icon128.png"
+    },
+    "background": {
+        "scripts": [
+            "background.js"
+        ],
+        "persistent": true
+    },
+    "content_scripts": [
+        {
+            "matches": [
+                "<all_urls>"
+            ],
+            "js": [
+                "content.js"
+            ]
+        }
+    ],
+    "browser_specific_settings": {
+        "gecko": {
+            "id": "linux-idm@xyberclan.com",
+            "strict_min_version": "42.0"
+        }
+    }
+}

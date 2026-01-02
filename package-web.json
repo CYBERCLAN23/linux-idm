@@ -1,0 +1,24 @@
+{
+    "name": "linux-idm-web",
+    "version": "1.0.0",
+    "description": "Internet Download Manager for Linux - Web Version",
+    "main": "server.js",
+    "scripts": {
+        "start": "node server.js",
+        "dev": "node server.js"
+    },
+    "keywords": [
+        "download",
+        "manager",
+        "linux",
+        "idm"
+    ],
+    "author": "XYBERCLAN",
+    "license": "MIT",
+    "dependencies": {
+        "express": "^4.18.2",
+        "axios": "^1.6.2",
+        "ytdl-core": "^4.11.5",
+        "ws": "^8.14.2"
+    }
+}

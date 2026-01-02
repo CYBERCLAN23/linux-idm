@@ -1,0 +1,12 @@
+.DS_Store
+node_modules/
+dist/
+*.log
+npm-debug.log*
+.electron-builder-cache/
+out/
+*.AppImage
+*.deb
+*.rpm
+.vscode/
+.idea/
