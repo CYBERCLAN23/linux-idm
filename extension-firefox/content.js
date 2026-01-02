@@ -1,5 +1,11 @@
 // Scans the DOM for video and audio tags
 function scanDOM() {
+    // Safety check: if extension was updated/reloaded, the context is invalidated.
+    if (!chrome.runtime?.id) {
+        observer.disconnect();
+        return;
+    }
+
     const media = [];
 
     // 1. YouTube Specific Detection
@@ -44,7 +50,12 @@ function scanDOM() {
     });
 
     media.forEach(m => {
-        chrome.runtime.sendMessage({ action: 'addMedia', media: m });
+        try {
+            chrome.runtime.sendMessage({ action: 'addMedia', media: m });
+        } catch (e) {
+            // Context likely invalidated
+            if (observer) observer.disconnect();
+        }
     });
 }
 
