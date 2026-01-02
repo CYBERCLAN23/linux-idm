@@ -137,12 +137,17 @@ chrome.runtime.onMessage.addListener((request, sender, sendResponse) => {
             });
         return true; // Keep message channel open for async response
     } else if (request.action === 'pingIDM') {
-        fetch('http://127.0.0.1:3000/api/downloads', { method: 'GET' })
-            .then(() => {
-                sendResponse({ connected: true });
-            })
+        // Try 127.0.0.1 first, then localhost as fallback
+        fetch('http://127.0.0.1:3000/api/downloads', { method: 'GET', cache: 'no-store' })
+            .then(() => sendResponse({ connected: true }))
             .catch(() => {
-                sendResponse({ connected: false });
+                // Fallback to localhost
+                fetch('http://localhost:3000/api/downloads', { method: 'GET', cache: 'no-store' })
+                    .then(() => sendResponse({ connected: true }))
+                    .catch((err) => {
+                        console.error('🛰️ Ping Failed on both 127.0.0.1 and localhost:', err.message);
+                        sendResponse({ connected: false });
+                    });
             });
         return true;
     }

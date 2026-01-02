@@ -16,7 +16,7 @@ document.addEventListener('DOMContentLoaded', async () => {
                 serverText.textContent = 'IDM Connected';
             } else {
                 serverDot.classList.remove('connected');
-                serverText.textContent = 'IDM Disconnected (Open App)';
+                serverText.textContent = 'IDM Disconnected (Check Console)';
             }
         });
     }
