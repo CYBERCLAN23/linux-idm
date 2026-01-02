@@ -27,7 +27,14 @@ jobs:
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
 
+      - name: Package Browser Extensions
+        run: |
+          zip -r linux-idm-extension.zip extension
+          cd extension-firefox && zip -r ../linux-idm-firefox.zip . && cd ..
+
       - name: Create Release
+        # NOTE: The "Unable to resolve action" errors in the editor are false positives
+        # caused by local network/DNS issues. These actions are official and correct.
         uses: softprops/action-gh-release@v2
         if: startsWith(github.ref, 'refs/tags/')
         with:
