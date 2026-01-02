@@ -212,31 +212,22 @@ async function startDownload(download) {
     }
 }
 
+const youtubeAgent = ytdl.createAgent();
+
 async function handleYouTubeDownload(download) {
     try {
         console.log('Starting YouTube download:', download.url);
 
-        const requestOptions = {
-            headers: {
-                'User-Agent': 'Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36',
-                'Accept': 'text/html,application/xhtml+xml,application/xml;q=0.9,image/avif,image/webp,image/apng,*/*;q=0.8',
-            }
-        };
+        // Use a more modern Agent approach for bypasses
+        const info = await ytdl.getInfo(download.url, { agent: youtubeAgent });
 
-        const info = await ytdl.getInfo(download.url, { requestOptions });
         const title = info.videoDetails.title.replace(/[^a-z0-9]/gi, '_');
         download.filename = `${title}.mp4`;
 
         const stream = ytdl(download.url, {
-            quality: 'highest',
-            requestOptions
-        });
-
-        stream.on('error', (err) => {
-            console.error('YouTube Stream Error:', err);
-            download.status = 'error';
-            download.error = err.message;
-            broadcast({ type: 'download-error', download });
+            quality: 'highestvideo', // Try getting highest video
+            filter: format => format.container === 'mp4', // Filter for mp4 to simplify
+            agent: youtubeAgent
         });
 
         const downloadDir = download.savePath;
@@ -275,6 +266,14 @@ async function handleYouTubeDownload(download) {
         });
 
         writer.on('error', (err) => {
+            console.error('YouTube Writestream Error:', err);
+            download.status = 'error';
+            download.error = err.message;
+            broadcast({ type: 'download-error', download });
+        });
+
+        stream.on('error', (err) => {
+            console.error('YouTube Stream Error:', err);
             download.status = 'error';
             download.error = err.message;
             broadcast({ type: 'download-error', download });
@@ -283,9 +282,12 @@ async function handleYouTubeDownload(download) {
     } catch (err) {
         console.error('YouTube Metadata Error:', err);
         download.status = 'error';
-        download.error = err.message.includes('429')
-            ? 'Rate Limited (429). Try disabling VPN or wait a few minutes.'
-            : err.message;
+        let errorMsg = err.message;
+        if (err.message.includes('429')) errorMsg = 'Rate Limited (429). Try disabling VPN.';
+        if (err.message.includes('403')) errorMsg = 'Access Forbidden (403). YouTube detected bot behavior.';
+        if (err.message.includes('decipher')) errorMsg = 'YouTube updated its security. Please update Linux IDM.';
+
+        download.error = errorMsg;
         broadcast({ type: 'download-error', download });
     }
 }

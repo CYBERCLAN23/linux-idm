@@ -162,9 +162,13 @@ function updatePanelContent() {
                 });
 
                 if (response.ok) {
-                    this.textContent = 'Success! Check IDM App ✅';
+                    this.textContent = 'Success! Opening IDM... ✅';
                     this.style.background = '#10b981';
-                    setTimeout(() => { if (panelElement) panelElement.remove(); panelElement = null; }, 3000);
+
+                    // Redirect to the IDM dashboard in a new tab
+                    window.open('http://localhost:3000', '_blank');
+
+                    setTimeout(() => { if (panelElement) panelElement.remove(); panelElement = null; }, 2000);
                 } else { throw new Error(); }
             } catch (e) {
                 this.textContent = '❌ Error: IDM Not Running';
