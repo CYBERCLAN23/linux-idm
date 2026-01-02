@@ -212,82 +212,70 @@ async function startDownload(download) {
     }
 }
 
-const youtubeAgent = ytdl.createAgent();
+const { spawn } = require('child_process');
 
 async function handleYouTubeDownload(download) {
     try {
-        console.log('Starting YouTube download:', download.url);
+        console.log('🚀 Using YT-DLP for robust download:', download.url);
 
-        // Use a more modern Agent approach for bypasses
-        const info = await ytdl.getInfo(download.url, { agent: youtubeAgent });
-
-        const title = info.videoDetails.title.replace(/[^a-z0-9]/gi, '_');
-        download.filename = `${title}.mp4`;
-
-        const stream = ytdl(download.url, {
-            quality: 'highestvideo', // Try getting highest video
-            filter: format => format.container === 'mp4', // Filter for mp4 to simplify
-            agent: youtubeAgent
-        });
+        // 1. Get info first to get the title
+        const { execSync } = require('child_process');
+        const titleData = execSync(`yt-dlp --get-title "${download.url}"`).toString().trim();
+        download.filename = `${titleData.replace(/[^a-z0-9]/gi, '_')}.mp4`;
 
         const downloadDir = download.savePath;
         if (!fs.existsSync(downloadDir)) fs.mkdirSync(downloadDir, { recursive: true });
-
         const filePath = path.join(downloadDir, download.filename);
-        const writer = fs.createWriteStream(filePath);
 
-        stream.pipe(writer);
+        // 2. Start the process
+        // We use --newline to get easy-to-parse progress
+        const process = spawn('yt-dlp', [
+            '-f', 'bv*[ext=mp4]+ba[ext=m4a]/b[ext=mp4] / bv*+ba/b',
+            '--newline',
+            '--progress-template', 'IDM:%(progress._percent_str)s|%(progress._speed_str)s|%(progress._total_bytes_estimate_str)s',
+            '-o', filePath,
+            download.url
+        ]);
 
-        let lastLoaded = 0;
-        let lastTime = Date.now();
+        process.stdout.on('data', (data) => {
+            const line = data.toString();
+            if (line.includes('IDM:')) {
+                const parts = line.split('IDM:')[1].split('|');
+                const percent = parseFloat(parts[0].replace('%', ''));
+                const speedStr = parts[1];
+                const totalSizeStr = parts[2];
 
-        stream.on('progress', (chunkLength, downloaded, total) => {
-            const currentTime = Date.now();
-            const timeDiff = (currentTime - lastTime) / 1000;
-            const loadedDiff = downloaded - lastLoaded;
-            const speed = timeDiff > 0 ? (loadedDiff / 1024) / timeDiff : 0;
+                download.progress = Math.round(percent);
+                download.status = 'downloading';
+                // Try to parse speed into KB/s if possible for the UI
+                if (speedStr.includes('k')) download.speed = parseFloat(speedStr);
+                else if (speedStr.includes('M')) download.speed = parseFloat(speedStr) * 1024;
 
-            download.downloadedSize = downloaded;
-            download.totalSize = total;
-            download.progress = total ? Math.round((downloaded / total) * 100) : 0;
-            download.speed = Math.round(speed);
-
-            lastLoaded = downloaded;
-            lastTime = currentTime;
-
-            broadcast({ type: 'download-progress', download });
+                broadcast({ type: 'download-progress', download });
+            }
         });
 
-        writer.on('finish', () => {
-            download.status = 'completed';
-            download.progress = 100;
-            download.speed = 0;
-            broadcast({ type: 'download-complete', download });
+        process.stderr.on('data', (data) => {
+            console.error('YT-DLP Warning:', data.toString());
         });
 
-        writer.on('error', (err) => {
-            console.error('YouTube Writestream Error:', err);
-            download.status = 'error';
-            download.error = err.message;
-            broadcast({ type: 'download-error', download });
-        });
-
-        stream.on('error', (err) => {
-            console.error('YouTube Stream Error:', err);
-            download.status = 'error';
-            download.error = err.message;
-            broadcast({ type: 'download-error', download });
+        process.on('close', (code) => {
+            if (code === 0) {
+                download.status = 'completed';
+                download.progress = 100;
+                download.speed = 0;
+                broadcast({ type: 'download-complete', download });
+            } else {
+                download.status = 'error';
+                download.error = `yt-dlp exited with code ${code}. If you are on a VPN, try turning it off.`;
+                broadcast({ type: 'download-error', download });
+            }
         });
 
     } catch (err) {
-        console.error('YouTube Metadata Error:', err);
+        console.error('YouTube/YT-DLP Error:', err);
         download.status = 'error';
-        let errorMsg = err.message;
-        if (err.message.includes('429')) errorMsg = 'Rate Limited (429). Try disabling VPN.';
-        if (err.message.includes('403')) errorMsg = 'Access Forbidden (403). YouTube detected bot behavior.';
-        if (err.message.includes('decipher')) errorMsg = 'YouTube updated its security. Please update Linux IDM.';
-
-        download.error = errorMsg;
+        download.error = `Download failed: ${err.message}`;
         broadcast({ type: 'download-error', download });
     }
 }
