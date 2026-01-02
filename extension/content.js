@@ -189,23 +189,24 @@ function updatePanelContent() {
             this.disabled = true;
 
             try {
-                const response = await fetch('http://localhost:3000/api/download', {
-                    method: 'POST',
-                    headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify({
+                chrome.runtime.sendMessage({
+                    action: 'startDownload',
+                    data: {
                         url: mainMedia.url,
                         filename: mainMedia.filename.replace(/[^a-z0-9]/gi, '_').substring(0, 80) + '.mp4',
                         savePath: '',
                         chunks: 8
-                    })
+                    }
+                }, response => {
+                    if (response && response.success) {
+                        this.textContent = 'Success! Opening IDM... ✅';
+                        this.style.background = '#10b981';
+                        window.open('http://localhost:3000', '_blank');
+                        setTimeout(() => { if (panelElement) panelElement.remove(); panelElement = null; }, 2000);
+                    } else {
+                        throw new Error(response ? response.error : 'Unknown error');
+                    }
                 });
-
-                if (response.ok) {
-                    this.textContent = 'Success! Opening IDM... ✅';
-                    this.style.background = '#10b981';
-                    window.open('http://localhost:3000', '_blank');
-                    setTimeout(() => { if (panelElement) panelElement.remove(); panelElement = null; }, 2000);
-                } else { throw new Error(); }
             } catch (e) {
                 this.textContent = '❌ Error: IDM Not Running';
                 this.style.background = '#ef4444';

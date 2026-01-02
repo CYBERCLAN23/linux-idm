@@ -114,6 +114,29 @@ chrome.runtime.onMessage.addListener((request, sender, sendResponse) => {
             chrome.action.setBadgeText({ text: '', tabId: tabId });
         }
         sendResponse({ success: true });
+    } else if (request.action === 'startDownload') {
+        // Perform the fetch from the background script to bypass CORS/Mixed Content
+        fetch('http://localhost:3000/api/download', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify(request.data)
+        })
+            .then(response => {
+                if (response.ok) {
+                    sendResponse({ success: true });
+                } else {
+                    sendResponse({ success: false, error: 'Server returned error' });
+                }
+            })
+            .catch(error => {
+                sendResponse({ success: false, error: error.message });
+            });
+        return true; // Keep message channel open for async response
+    } else if (request.action === 'pingIDM') {
+        fetch('http://localhost:3000/api/downloads', { method: 'GET' })
+            .then(() => sendResponse({ connected: true }))
+            .catch(() => sendResponse({ connected: false }));
+        return true;
     }
 });
 

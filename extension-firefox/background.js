@@ -17,37 +17,40 @@ chrome.webRequest.onHeadersReceived.addListener(
                 const size = contentLengthHeader ? parseInt(contentLengthHeader.value) : 0;
                 const url = details.url.toLowerCase();
 
-                // 1. Detect Media Types
+                // 1. Detect Media Types (HLS, DASH, Video, Audio)
                 const isVideo = type.startsWith('video/');
                 const isAudio = type.startsWith('audio/');
                 const isHLS = type.includes('mpegurl') || url.includes('.m3u8');
+                const isDASH = type.includes('dash+xml') || url.includes('.mpd');
 
-                if (isVideo || isAudio || isHLS) {
+                if (isVideo || isAudio || isHLS || isDASH) {
                     const tabId = details.tabId;
 
                     // 2. Intelligent Filtering
-                    // Skip tiny files that are likely buffers or icons
-                    if (size > 0 && size < 100000 && !isHLS) return;
-
-                    // Skip obvious ad URLs
-                    if (AD_KEYWORDS.some(keyword => url.includes(keyword))) {
-                        console.log('Filtered ad:', url);
-                        return;
-                    }
+                    if (size > 0 && size < 100000 && !isHLS && !isDASH) return;
+                    if (AD_KEYWORDS.some(keyword => url.includes(keyword))) return;
 
                     if (!detectedMedia[tabId]) detectedMedia[tabId] = [];
-
                     if (!detectedMedia[tabId].some(m => m.url === details.url)) {
+
+                        // Better Filename Extraction
                         let filename = 'media_file';
-                        try {
-                            const urlObj = new URL(details.url);
-                            const pathPart = urlObj.pathname.split('/').pop();
-                            if (pathPart && pathPart.includes('.')) {
-                                filename = pathPart;
-                            } else {
-                                filename = `media_${Date.now()}.${type.split('/')[1].split(';')[0] || 'mp4'}`;
-                            }
-                        } catch (e) { }
+                        const dispositionHeader = headers.find(h => h.name.toLowerCase() === 'content-disposition');
+
+                        if (dispositionHeader && dispositionHeader.value.includes('filename=')) {
+                            filename = dispositionHeader.value.split('filename=')[1].split(';')[0].replace(/"/g, '');
+                        } else {
+                            try {
+                                const urlObj = new URL(details.url);
+                                const pathPart = urlObj.pathname.split('/').pop();
+                                if (pathPart && pathPart.includes('.')) {
+                                    filename = decodeURIComponent(pathPart);
+                                } else {
+                                    const ext = type.split('/')[1]?.split(';')[0] || (isHLS ? 'm3u8' : (isDASH ? 'mpd' : 'mp4'));
+                                    filename = `stream_${Date.now()}.${ext}`;
+                                }
+                            } catch (e) { }
+                        }
 
                         const mediaItem = {
                             url: details.url,
@@ -111,6 +114,29 @@ chrome.runtime.onMessage.addListener((request, sender, sendResponse) => {
             chrome.action.setBadgeText({ text: '', tabId: tabId });
         }
         sendResponse({ success: true });
+    } else if (request.action === 'startDownload') {
+        // Perform the fetch from the background script to bypass CORS/Mixed Content
+        fetch('http://localhost:3000/api/download', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify(request.data)
+        })
+            .then(response => {
+                if (response.ok) {
+                    sendResponse({ success: true });
+                } else {
+                    sendResponse({ success: false, error: 'Server returned error' });
+                }
+            })
+            .catch(error => {
+                sendResponse({ success: false, error: error.message });
+            });
+        return true; // Keep message channel open for async response
+    } else if (request.action === 'pingIDM') {
+        fetch('http://localhost:3000/api/downloads', { method: 'GET' })
+            .then(() => sendResponse({ connected: true }))
+            .catch(() => sendResponse({ connected: false }));
+        return true;
     }
 });
 

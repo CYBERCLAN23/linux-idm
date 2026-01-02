@@ -7,29 +7,28 @@ document.addEventListener('DOMContentLoaded', async () => {
     let isConnected = false;
     const IDM_API_URL = 'http://localhost:3000/api/download';
 
-    // Check IDM Connection
+    // Check IDM Connection via background
     async function checkConnection() {
-        try {
-            // We just ping the downloads list endpoint to check if server is up
-            await fetch('http://localhost:3000/api/downloads', { method: 'GET' });
-            isConnected = true;
-            serverDot.classList.add('connected');
-            serverText.textContent = 'IDM Connected';
-        } catch (e) {
-            isConnected = false;
-            serverDot.classList.remove('connected');
-            serverText.textContent = 'IDM Disconnected (Open App)';
-        }
+        chrome.runtime.sendMessage({ action: 'pingIDM' }, (response) => {
+            isConnected = response && response.connected;
+            if (isConnected) {
+                serverDot.classList.add('connected');
+                serverText.textContent = 'IDM Connected';
+            } else {
+                serverDot.classList.remove('connected');
+                serverText.textContent = 'IDM Disconnected (Open App)';
+            }
+        });
     }
     checkConnection();
-    setInterval(checkConnection, 5000);
+    setInterval(checkConnection, 3000);
 
     // Get current tab ID
     const [tab] = await chrome.tabs.query({ active: true, currentWindow: true });
 
     // Fetch detected media from background
     chrome.runtime.sendMessage({ action: 'getMedia', tabId: tab.id }, (response) => {
-        const media = response.media || [];
+        const media = response ? (response.media || []) : [];
         renderMedia(media);
     });
 
@@ -79,54 +78,50 @@ document.addEventListener('DOMContentLoaded', async () => {
             `;
 
             const btn = el.querySelector('.download-btn');
-            btn.addEventListener('click', () => startDownload(item));
+            btn.addEventListener('click', () => startDownload(item, btn));
 
             list.appendChild(el);
         });
     }
 
-    async function startDownload(item) {
+    async function startDownload(item, btn) {
         if (!isConnected) {
             alert('Linux IDM is not running! Please start the app first (./start.sh)');
             return;
         }
 
-        try {
-            const response = await fetch(IDM_API_URL, {
-                method: 'POST',
-                headers: {
-                    'Content-Type': 'application/json'
-                },
-                body: JSON.stringify({
-                    url: item.url,
-                    filename: item.filename,
-                    savePath: '', // Server will use default
-                    chunks: 8
-                })
-            });
+        const originalText = btn.textContent;
+        btn.textContent = '📡 Sending...';
+        btn.disabled = true;
 
-            if (!response.ok) {
-                const text = await response.text();
-                throw new Error(`Server Error (${response.status}): ${text.substring(0, 100)}`);
+        chrome.runtime.sendMessage({
+            action: 'startDownload',
+            data: {
+                url: item.url,
+                filename: item.filename,
+                savePath: '',
+                chunks: 8
             }
-
-            const data = await response.json();
-
-            // Show feedback
-            const btn = document.activeElement;
-            if (btn) {
-                const originalText = btn.textContent;
-                btn.textContent = 'Sent to IDM! 🚀';
+        }, (response) => {
+            if (response && response.success) {
+                btn.textContent = 'Sent Correctly! 🚀';
                 btn.style.background = '#10b981';
                 setTimeout(() => {
                     btn.textContent = originalText;
                     btn.style.background = '';
+                    btn.disabled = false;
+                }, 2000);
+                window.open('http://localhost:3000', '_blank');
+            } else {
+                btn.textContent = 'Error! ❌';
+                btn.style.background = '#ef4444';
+                setTimeout(() => {
+                    btn.textContent = originalText;
+                    btn.style.background = '';
+                    btn.disabled = false;
                 }, 2000);
             }
-
-        } catch (e) {
-            alert('Failed to send to IDM: ' + e.message);
-        }
+        });
     }
 
     function getIcon(type) {
