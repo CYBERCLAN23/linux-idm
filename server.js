@@ -220,7 +220,12 @@ async function handleYouTubeDownload(download) {
 
         // 1. Get info first to get the title
         const { execSync } = require('child_process');
-        const titleData = execSync(`yt-dlp --get-title "${download.url}"`).toString().trim();
+        let titleData = 'media';
+        try {
+            titleData = execSync(`yt-dlp --get-title --no-check-certificate "${download.url}"`).toString().trim();
+        } catch (e) {
+            console.warn('Title fetch failed, using fallback.');
+        }
         download.filename = `${titleData.replace(/[^a-z0-9]/gi, '_')}.mp4`;
 
         const downloadDir = download.savePath;
@@ -228,10 +233,12 @@ async function handleYouTubeDownload(download) {
         const filePath = path.join(downloadDir, download.filename);
 
         // 2. Start the process
-        // We use --newline to get easy-to-parse progress
+        // Added --user-agent and --no-check-certificate for extra resilience
         const process = spawn('yt-dlp', [
             '-f', 'bv*[ext=mp4]+ba[ext=m4a]/b[ext=mp4] / bv*+ba/b',
             '--newline',
+            '--no-check-certificate',
+            '--user-agent', 'Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/121.0.0.0 Safari/537.36',
             '--progress-template', 'IDM:%(progress._percent_str)s|%(progress._speed_str)s|%(progress._total_bytes_estimate_str)s',
             '-o', filePath,
             download.url
