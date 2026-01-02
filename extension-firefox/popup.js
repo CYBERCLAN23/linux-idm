@@ -105,6 +105,11 @@ document.addEventListener('DOMContentLoaded', async () => {
                 })
             });
 
+            if (!response.ok) {
+                const text = await response.text();
+                throw new Error(`Server Error (${response.status}): ${text.substring(0, 100)}`);
+            }
+
             const data = await response.json();
 
             // Show feedback

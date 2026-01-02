@@ -3,9 +3,9 @@ echo "🚀 Starting Linux IDM (Web Mode)..."
 echo "This will launch a local server and open your browser."
 echo ""
 
-if [ ! -d "node_modules/express" ]; then
+if [ ! -d "node_modules/cors" ]; then
     echo "📦 Dependencies not found. Installing..."
-    npm install express ws open axios ytdl-core --no-save
+    npm install express ws open axios ytdl-core cors --no-save
 fi
 
 echo "✅ Launching..."

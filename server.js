@@ -5,6 +5,7 @@ const path = require('path');
 const http = require('http');
 const WebSocket = require('ws');
 const os = require('os');
+const cors = require('cors');
 
 const app = express();
 const server = http.createServer(app);
@@ -14,7 +15,8 @@ const PORT = 3000;
 const downloads = new Map();
 
 // Middleware
-app.use(express.json());
+app.use(cors());
+app.use(express.json({ limit: '10mb' }));
 app.use(express.static(path.join(__dirname, 'src/renderer')));
 
 // WebSocket for real-time updates
