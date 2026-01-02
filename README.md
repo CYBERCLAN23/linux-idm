@@ -10,9 +10,10 @@
 ## ✨ Features
 
 - **🔥 Multi-threaded Downloads**: Split files into multiple chunks to maximize your bandwidth.
+- **⚡ Auto-Detection HUD**: Smart browser extension that automatically detects media and shows a beautiful download pop-up on page.
 - **⏸️ Pause & Resume**: Stop downloads at any time and resume them exactly where you left off.
 - **🌐 Browser Integration**: Dedicated extensions for Chrome/Chromium and Firefox to capture media links automatically.
-- **🎥 YouTube Downloader**: Built-in support for downloading videos directly from YouTube.
+- **🎥 YouTube Downloader**: Built-in support for downloading videos directly from YouTube with title and resolution detection.
 - **🎨 Premium Dark UI**: A beautiful, modern interface with glassmorphism effects and smooth animations.
 - **📂 Auto-Organization**: Automatically categorizes downloads and keeps your files organized.
 - **🖥️ System Tray**: Runs in the background with a minimal footprint.
@@ -20,30 +21,30 @@
 
 ---
 
-## 🚀 Getting Started
+## 🚀 Installation
+
+### 💨 The "Easy" Way (Any Distro)
+If you have the repository, just run the auto-installer:
+```bash
+./easy-install.sh
+```
 
 ### Method 1: Download Pre-built Packages (Recommended)
-Go to the [Releases](https://github.com/XYBERCLAN/linux-idm/releases) page and download the version for your distribution:
+Go to the [Releases](https://github.com/CYBERCLAN23/linux-idm/releases) page and download the version for your distribution:
 - **AppImage**: Universal, works on any Linux flavor.
 - **.deb**: For Debian, Ubuntu, Linux Mint, etc.
 - **.rpm**: For Fedora, RHEL, CentOS, etc.
-
-### Method 2: Use the Web Mode (No Installation)
-If you prefer a lighter experience or have issues with Electron:
-1. Clone the repo: `git clone https://github.com/XYBERCLAN/linux-idm.git`
-2. Run `./start-web.sh`
-3. Open your browser at `http://localhost:3000`
 
 ---
 
 ## 🧩 Browser Extensions
 
-Enhance your experience by installing our browser integration modules:
+Enhance your experience by installing our browser integration modules. They feature **Automatic Video Detection**!
 
-- **Chrome/Brave/Edge**: [Download `linux-idm-extension.zip`](https://github.com/XYBERCLAN/linux-idm/releases/latest)
-- **Firefox**: [Download `linux-idm-firefox.zip`](https://github.com/XYBERCLAN/linux-idm/releases/latest)
+- **Chrome/Brave/Edge**: [Download `linux-idm-extension.zip`](https://github.com/CYBERCLAN23/linux-idm/releases/latest)
+- **Firefox**: [Download `linux-idm-firefox.zip`](https://github.com/CYBERCLAN23/linux-idm/releases/latest)
 
-Refer to the [Extension Manual](EXTENSION_MANUAL.md) for installation instructions.
+Refer to the [Extension Manual](EXTENSION_MANUAL.md) for detailed installation instructions.
 
 ---
 
@@ -53,17 +54,15 @@ If you want to build from source:
 
 ```bash
 # Clone the repository
-git clone https://github.com/XYBERCLAN/linux-idm.git
+git clone https://github.com/CYBERCLAN23/linux-idm.git
 cd linux-idm
 
-# Install dependencies
+# Use the easy installer
+./easy-install.sh
+
+# Or manual installation
 npm install
-
-# Run in dev mode
 npm run dev
-
-# Build for Linux
-npm run build:linux
 ```
 
 ---
