@@ -229,6 +229,8 @@ async function handleYouTubeDownload(download) {
                 const titleProcess = spawn('yt-dlp', [
                     '--get-title',
                     '--no-check-certificate',
+                    '--force-ipv4',
+                    '--no-cache-dir',
                     '--extractor-args', 'youtube:player-client=web,ios',
                     download.url
                 ]);
@@ -236,7 +238,7 @@ async function handleYouTubeDownload(download) {
                 const timeout = setTimeout(() => {
                     titleProcess.kill();
                     resolve('youtube_video');
-                }, 15000); // 15s timeout
+                }, 20000); // 20s timeout
 
                 titleProcess.stdout.on('data', (data) => { result += data.toString(); });
                 titleProcess.on('close', (code) => {
@@ -262,12 +264,14 @@ async function handleYouTubeDownload(download) {
             '--newline',
             '--no-playlist',
             '--no-check-certificate',
+            '--force-ipv4',
+            '--no-cache-dir',
             '--extractor-args', 'youtube:player-client=web,ios',
             '--user-agent', 'Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/121.0.0.0 Safari/537.36',
             '--external-downloader', 'aria2c',
-            '--external-downloader-args', 'aria2c:-x 8 -s 8 -k 1M --file-allocation=none',
+            '--external-downloader-args', 'aria2c:-x 16 -s 16 -k 1M --file-allocation=none',
             '--buffer-size', '1M',
-            '--concurrent-fragments', '4',
+            '--concurrent-fragments', '8',
             '--progress-template', 'IDM:%(progress._percent_str)s|%(progress._speed_str)s|%(progress._total_bytes_estimate_str)s',
             '-o', filePath,
             download.url
@@ -282,13 +286,25 @@ async function handleYouTubeDownload(download) {
                 const percentStr = parts[0].replace('%', '').trim();
                 const percent = parseFloat(percentStr);
                 const speedStr = parts[1];
-                const totalSizeStr = parts[2];
+                const estimateSizeStr = parts[2];
 
                 download.progress = Math.round(percent);
                 download.status = 'downloading';
 
+                // Parse speed
                 if (speedStr.includes('k')) download.speed = parseFloat(speedStr);
                 else if (speedStr.includes('M')) download.speed = parseFloat(speedStr) * 1024;
+                else download.speed = parseFloat(speedStr) || 0;
+
+                // Parse total size estimate if possible
+                if (estimateSizeStr && estimateSizeStr !== 'NA') {
+                    if (estimateSizeStr.includes('MiB')) download.totalSize = parseFloat(estimateSizeStr) * 1024 * 1024;
+                    else if (estimateSizeStr.includes('GiB')) download.totalSize = parseFloat(estimateSizeStr) * 1024 * 1024 * 1024;
+                    else if (estimateSizeStr.includes('KiB')) download.totalSize = parseFloat(estimateSizeStr) * 1024;
+                    else download.totalSize = parseFloat(estimateSizeStr) || 0;
+
+                    download.downloadedSize = (download.totalSize * (percent / 100));
+                }
 
                 broadcast({ type: 'download-progress', download });
 
