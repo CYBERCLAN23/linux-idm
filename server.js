@@ -216,12 +216,27 @@ async function handleYouTubeDownload(download) {
     try {
         console.log('Starting YouTube download:', download.url);
 
-        const info = await ytdl.getInfo(download.url);
+        const requestOptions = {
+            headers: {
+                'User-Agent': 'Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36',
+                'Accept': 'text/html,application/xhtml+xml,application/xml;q=0.9,image/avif,image/webp,image/apng,*/*;q=0.8',
+            }
+        };
+
+        const info = await ytdl.getInfo(download.url, { requestOptions });
         const title = info.videoDetails.title.replace(/[^a-z0-9]/gi, '_');
         download.filename = `${title}.mp4`;
 
         const stream = ytdl(download.url, {
-            quality: 'highest'
+            quality: 'highest',
+            requestOptions
+        });
+
+        stream.on('error', (err) => {
+            console.error('YouTube Stream Error:', err);
+            download.status = 'error';
+            download.error = err.message;
+            broadcast({ type: 'download-error', download });
         });
 
         const downloadDir = download.savePath;
@@ -243,7 +258,7 @@ async function handleYouTubeDownload(download) {
 
             download.downloadedSize = downloaded;
             download.totalSize = total;
-            download.progress = Math.round((download / total) * 100);
+            download.progress = total ? Math.round((downloaded / total) * 100) : 0;
             download.speed = Math.round(speed);
 
             lastLoaded = downloaded;
@@ -266,8 +281,11 @@ async function handleYouTubeDownload(download) {
         });
 
     } catch (err) {
+        console.error('YouTube Metadata Error:', err);
         download.status = 'error';
-        download.error = err.message;
+        download.error = err.message.includes('429')
+            ? 'Rate Limited (429). Try disabling VPN or wait a few minutes.'
+            : err.message;
         broadcast({ type: 'download-error', download });
     }
 }
