@@ -43,7 +43,7 @@ echo -e "${GREEN}✅ Node.js found: $(node -v)${NC}"
 
 # Install packages
 echo -e "\n📦 Installing application dependencies..."
-npm install express ws open axios ytdl-core --no-save
+npm install express ws open axios ytdl-core @distube/ytdl-core cors --no-save
 
 # Install desktop entries
 echo -e "\n🖥️ Setting up application menu shortcuts..."

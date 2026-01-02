@@ -5,7 +5,7 @@ echo ""
 
 if [ ! -d "node_modules/cors" ]; then
     echo "📦 Dependencies not found. Installing..."
-    npm install express ws open axios ytdl-core cors --no-save
+    npm install express ws open axios @distube/ytdl-core cors --no-save
 fi
 
 echo "✅ Launching..."
